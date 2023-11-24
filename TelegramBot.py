@@ -14,8 +14,8 @@ import requests
 CoinMktCap_API: Final = '[Your Own CoinMarketCap API Key]'
 
 # Telegram Bot Token
-Telegram_Token: Final = 'Telegram Token'
-BotUserName: Final = 'Name of your Telegram Bot'
+Telegram_Token: Final = '[Telegram Token]'
+BotUserName: Final = '[Name of your Telegram Bot]'
 CRYPTO_INPUT = 1
 
 # To store and hold the crypto wanted price
@@ -24,6 +24,8 @@ alert_inputs = {'Crypto_Symbol': [], '< / >': [], 'Currency':[], 'Price':[]}
 alert_inputs = pd.DataFrame(alert_inputs)
 
 
+
+# The start button / opening message when someone starts chatting with your bot.
 def start(update: Update, context: CallbackContext) -> None:
     """Sends a message when the start is issued."""
     user = update.effective_user
@@ -34,6 +36,8 @@ def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Welcome to @ECON3086_CryptoPriceAlertbot! 🤗')
     update.message.reply_text('Type /help for more information.')
 
+
+# The help button that shows what buttons/functions are there.
 def help_command(update: Update, context: CallbackContext) -> None:
     """Sends a message when the command /help is issued."""
     update.message.reply_text(
@@ -49,6 +53,7 @@ def help_command(update: Update, context: CallbackContext) -> None:
 /exit -> Ends chat with @ECON3086_CryptoPriceAlertbot
         """)
 
+# This command runs the check_portfolio() function.
 def portfolio_command(update: Update, context: CallbackContext) -> None:
     """Shows current portfolio."""
     update.message.reply_text("Current Portfolio Holdings: \n{}".format(check_portfolio()))
@@ -60,11 +65,14 @@ def check_portfolio():
         to_return+=f"{symbol}: {quantity}\n"
     return to_return
 
+
+# This command runs the process_crypto_input_trade() by asking users for their input
 def place_trade_command(update: Update, context: CallbackContext) -> None:
     text = "What would like to do (buy or sell), what crypto coin (crypto symbol) and what is the volume would you like to trade?\nExample: BUY BTC 50"
     update.message.reply_text(text)
     return CRYPTO_INPUT
 
+# Once telegram/python receives user input, instant_trade function is called
 def process_crypto_input_trade(update: Update, context: CallbackContext) -> None:
     message: Message = update.message
     input_text = message.text
@@ -75,7 +83,6 @@ def process_crypto_input_trade(update: Update, context: CallbackContext) -> None
     volume: float = float(list_info[-1])
     instant_trade(action, crypto_symbol, volume, update)
     return ConversationHandler.END
-
 
 def instant_trade(action, symbol, quantity, update: Update):
     if action == 'BUY':
@@ -100,15 +107,14 @@ def sell(symbol, quantity, update: Update):
         update.message.reply_text(f"You do not have enough {symbol} to sell.")
 
 
-
-
+# Exit command is to exit the program & telegram bot.
 def exit_command(update: Update, context: CallbackContext) -> None:
     """Sends a goodbye message when /exit is issued."""
     update.message.reply_text('Thank you. Bye bye!')
     exit()
 
 
-
+# This is to get the current price of desired cryptocurrency.
 def current_price_command(update: Update, context: CallbackContext) -> None:
     message: Message = update.message
     text = "⚠️ Please enter the crypto coin symbol, currency symbol: [crypto symbol] [currency symbol].\nExample: BTC USD"
@@ -155,20 +161,8 @@ def process_crypto_input_current(update: Update, context: CallbackContext) -> No
 
     return ConversationHandler.END
 
-# Our price_recurring_alert
-def get_current_price(crypto_symbol, currency_symbol):
-    api = CoinMktCap_API
-    url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
-    params = {'symbol': crypto_symbol, 'convert': currency_symbol}
-    headers = {'X-CMC_PRO_API_KEY': CoinMktCap_API}
-    response = requests.get(url, headers=headers, params=params)
-    data = response.json()
-    # last_updated = data['data'][crypto_symbol]['quote'][currency_symbol]['last_updated']
-    current_price = data['data'][crypto_symbol]['quote'][currency_symbol]['price']
-    return current_price
 
-
-# From online for recurring
+# This is to get the recurring alert/notification when desired cryptocurrency reaches input prices (higher or lower).
 def price_recurring_Alert_command(update: Update, context: CallbackContext) -> None:
     if len(context.args) > 2:
         crypto = context.args[0].upper()
@@ -188,12 +182,16 @@ def price_recurring_Alert_command(update: Update, context: CallbackContext) -> N
 
     context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
-def get_alert_input():
-    return alert_inputs
-
-def update_alert_input(df, crypto, sign, currency, target_price):
-    df.loc[len(alert_inputs.index)] = [crypto.upper(), sign, currency.upper(), target_price]
-    print(df)
+def get_current_price(crypto_symbol, currency_symbol):
+    api = CoinMktCap_API
+    url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
+    params = {'symbol': crypto_symbol, 'convert': currency_symbol}
+    headers = {'X-CMC_PRO_API_KEY': CoinMktCap_API}
+    response = requests.get(url, headers=headers, params=params)
+    data = response.json()
+    # last_updated = data['data'][crypto_symbol]['quote'][currency_symbol]['last_updated']
+    current_price = data['data'][crypto_symbol]['quote'][currency_symbol]['price']
+    return current_price
 
 def priceAlertCallback(context):
     crypto = context.job.context[0].upper()
@@ -229,8 +227,17 @@ def priceAlertCallback(context):
         context.bot.send_message(chat_id=chat_id, text=response)
 
 
+# Returns alert_inputs dataframe
+def get_alert_input():
+    return alert_inputs
 
-# alert_inputs = {'Crypto_Symbol': [], '< / >': [], 'Currency':[], 'Price':[]}
+# updates the alert_input dataframe
+def update_alert_input(df, crypto, sign, currency, target_price):
+    df.loc[len(alert_inputs.index)] = [crypto.upper(), sign, currency.upper(), target_price]
+    print(df)
+
+
+# Check existing price alert
 def check_alert_command(update: Update, context: CallbackContext) -> None:
     if len(alert_inputs) == 0:
         update.message.reply_text("There are no price alerts in place.")
@@ -240,7 +247,6 @@ def check_alert_command(update: Update, context: CallbackContext) -> None:
         for index, rows in alert_inputs.iterrows():
             response += f"{index}.\t{rows['Crypto_Symbol']}\t{rows['< / >']}\t{rows['Currency']}\t{rows['Price']}\n"
         update.message.reply_text(response)
-
 
 def current_price_for_alert(Crypto_Symbol, Currency):
     url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
@@ -258,6 +264,7 @@ def current_price_for_alert(Crypto_Symbol, Currency):
     return current_price
 
 
+# This command is to remove the price alert in placed
 def remove_alert_command(update: Update, context: CallbackContext):
     df = get_alert_input()
     if len(df) == 0:
@@ -270,8 +277,7 @@ def remove_alert_command(update: Update, context: CallbackContext):
         context.user_data['state'] = CRYPTO_INPUT
         return CRYPTO_INPUT
 
-
-
+# Function to remove the price alert
 def process_remove_alert_input(update: Update, context: CallbackContext) -> None:
     message: Message = update.message
     input_text = message.text
@@ -345,13 +351,6 @@ def main() -> None:
     # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
 
-
-
-
-# Look here for reference
-# https://github.com/MWessels62/CryptoPricing_TelegramBot/blob/main/main.py
-# https://www.youtube.com/watch?v=xNFK7toe5UE
-# https://www.geeksforgeeks.org/get-real-time-crypto-price-using-python-and-binance-api/
 
 # Telegram Update
 if __name__ == '__main__':
